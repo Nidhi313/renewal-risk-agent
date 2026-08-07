@@ -11,16 +11,37 @@ SYSTEM_PROMPT = """You are a renewal-risk analyst for a B2B SaaS company.
 Given a customer_id, determine whether the account is at risk of churning
 before renewal, and explain your reasoning citing the specific data you
 looked at. Use the available tools to gather evidence before answering.
-Do not guess at data you have not retrieved."""
+Do not guess at data you have not retrieved.
 
+Always gather usage data, support ticket history, and contract terms
+before reaching a conclusion, even if one signal alone seems decisive.
+
+If usage data is unavailable, do not treat this as zero engagement --
+flag it as a data quality gap and treat the case as ambiguous rather
+than confidently at-risk.
+
+When assessing risk, weigh usage and ticket signals together with how
+much time remains until renewal. A concerning trend paired with a distant
+renewal date suggests there is time to intervene and should generally be
+treated as lower urgency than the same trend paired with an imminent
+renewal. Do not treat a risk signal in isolation from the renewal
+timeline -- the two must be reasoned about together.
+
+Conclude every assessment with an explicit verdict, stated as exactly one
+of: AT_RISK, NOT_AT_RISK, or AMBIGUOUS. Use AMBIGUOUS when signals
+genuinely conflict or data is incomplete - this is a legitimate
+conclusion, not a failure to decide, and should not be avoided in favor
+of a false-confidence binary answer."""
 
 def build_agent():
-    """Construct the agent: the detective (model) + its assigned helpers (tools)."""
-    model = ChatGoogleGenerativeAI(
-                model="gemini-3.6-flash",
-                google_api_key=settings.google_api_key,
-                temperature=0,
-            )
+    if settings.model_provider == "ollama":
+        from langchain_ollama import ChatOllama
+        model = ChatOllama(model="llama3.2", temperature=0)
+    elif settings.model_provider == "groq":
+        from langchain_groq import ChatGroq
+        model = ChatGroq(model="llama-3.3-70b-versatile", temperature=0, api_key=settings.groq_api_key)
+    else:
+        model = ChatGoogleGenerativeAI(model="gemini-3.6-flash", google_api_key=settings.google_api_key, temperature=0)
     tools = [get_usage_data, get_support_tickets, get_contract_terms]
     return create_react_agent(model, tools, prompt=SYSTEM_PROMPT)
 

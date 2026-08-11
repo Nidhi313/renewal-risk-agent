@@ -10,7 +10,9 @@ for position bias, run-to-run consistency, and calibration against
 human-labeled cases — rather than assuming the judge's verdicts can be
 trusted by default.
 
-Deployed version: TBD
+Deployed version: [https://renewal-risk-agent.onrender.com](https://renewal-risk-agent.onrender.com)
+
+Example: `GET /predict/renewal-risk/?customer_id=cust_001` (also try cust_002 through cust_020 — see `data/golden_set/cases.jsonl` for the full scenario list)
 
 ## Repository Structure
 

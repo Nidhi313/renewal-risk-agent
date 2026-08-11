@@ -53,6 +53,50 @@ _FAKE_CONTRACTS = {
     "cust_010": {"tier": "growth", "renewal_date": (_TODAY + timedelta(days=5)).isoformat(), "annual_value": 26000},
 }
 
+_FAKE_USAGE.update({
+    "cust_011": {"customer_id": "cust_011", "usage_30d": 5, "usage_90d_avg": 200, "trend": "declining"},
+    "cust_012": {"customer_id": "cust_012", "usage_30d": 500, "usage_90d_avg": 210, "trend": "rising"},
+    "cust_013": {"customer_id": "cust_013", "usage_30d": 80, "usage_90d_avg": 160, "trend": "declining"},
+    "cust_014": {"customer_id": "cust_014", "usage_30d": 300, "usage_90d_avg": 280, "trend": "rising"},
+    "cust_015": {"customer_id": "cust_015", "usage_30d": 100, "usage_90d_avg": 102, "trend": "flat"},
+    "cust_016": {"customer_id": "cust_016", "usage_30d": None, "usage_90d_avg": None, "trend": "unknown"},
+    "cust_017": {"customer_id": "cust_017", "usage_30d": 90, "usage_90d_avg": 140, "trend": "declining"},
+    "cust_018": {"customer_id": "cust_018", "usage_30d": 50, "usage_90d_avg": 55, "trend": "flat"},
+    "cust_019": {"customer_id": "cust_019", "usage_30d": 15, "usage_90d_avg": 180, "trend": "declining"},
+    "cust_020": {"customer_id": "cust_020", "usage_30d": 120, "usage_90d_avg": 118, "trend": "stable"},
+})
+
+_FAKE_TICKETS.update({
+    "cust_011": [],
+    "cust_012": [{"id": "t11", "topic": "expansion inquiry", "sentiment": "positive"}],
+    "cust_013": [
+        {"id": "t12", "topic": "feature praise", "sentiment": "positive"},
+        {"id": "t13", "topic": "feature praise 2", "sentiment": "positive"},
+    ],
+    "cust_014": [{"id": "t14", "topic": "critical outage", "sentiment": "very_negative", "status": "unresolved"}],
+    "cust_015": [],
+    "cust_016": [],
+    "cust_017": [
+        {"id": "t15", "topic": "pricing complaint", "sentiment": "negative", "status": "unresolved"},
+        {"id": "t16", "topic": "feature request", "sentiment": "positive"},
+    ],
+    "cust_018": [{"id": "t17", "topic": "billing question", "sentiment": "neutral"}],
+    "cust_019": [],
+    "cust_020": [],
+})
+
+_FAKE_CONTRACTS.update({
+    "cust_011": {"tier": "growth", "renewal_date": (_TODAY + timedelta(days=3)).isoformat(), "annual_value": 22000},
+    "cust_012": {"tier": "enterprise", "renewal_date": (_TODAY + timedelta(days=4)).isoformat(), "annual_value": 150000},
+    "cust_013": {"tier": "growth", "renewal_date": (_TODAY + timedelta(days=45)).isoformat(), "annual_value": 29000},
+    "cust_014": {"tier": "enterprise", "renewal_date": (_TODAY + timedelta(days=12)).isoformat(), "annual_value": 110000},
+    "cust_015": {"tier": "growth", "renewal_date": (_TODAY + timedelta(days=150)).isoformat(), "annual_value": 21000},
+    "cust_016": {"tier": "growth", "renewal_date": (_TODAY + timedelta(days=10)).isoformat(), "annual_value": 24000},
+    "cust_017": {"tier": "growth", "renewal_date": (_TODAY + timedelta(days=18)).isoformat(), "annual_value": 27000},
+    "cust_018": {"tier": "enterprise", "renewal_date": (_TODAY + timedelta(days=90)).isoformat(), "annual_value": 200000},
+    "cust_019": {"tier": "growth", "renewal_date": (_TODAY + timedelta(days=250)).isoformat(), "annual_value": 18000},
+    "cust_020": {"tier": "growth", "renewal_date": _TODAY.isoformat(), "annual_value": 24000},
+})
 
 @tool
 def get_usage_data(customer_id: str) -> dict:

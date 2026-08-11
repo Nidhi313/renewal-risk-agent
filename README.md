@@ -135,12 +135,3 @@ uvicorn src.main:app --host 0.0.0.0 --port 8080
   — [arxiv.org/pdf/2603.01865](https://arxiv.org/pdf/2603.01865)
 - JUDGe 2026 — Can We Trust the Judge? —
   [judge2026.github.io](https://judge2026.github.io/)
-
-## Status
-
-Core system complete: agent, golden-set eval harness (20 cases), and the
-full Judge Integrity Toolkit (position bias, consistency/flip-rate,
-human calibration, cost-aware scheduling) are built, tested, and
-validated against real project data. Remaining: `src/main.py` (wire the
-FastAPI endpoint to the agent) and `src/tracing.py` (OpenTelemetry/
-Phoenix instrumentation), then containerized deployment.

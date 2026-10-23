@@ -74,6 +74,6 @@ def test_sample_rate_roughly_matches_over_many_trials():
 def test_invalid_sample_rate_raises():
     try:
         should_sample_this_request(sample_rate=1.5)
-        assert False, "should have raised"
+        raise AssertionError("should have raised")
     except ValueError:
         pass

@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Renewal Risk Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #eef1f4;
+    --surface: #ffffff;
+    --ink: #1c2430;
+    --muted: #5b6675;
+    --line: #cdd3db;
+    --action: #2b4c7e;
+    --risk: #a4243b;
+    --safe: #2f6b4f;
+    --unsure: #8a6a12;
+    --none: #8a93a0;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 15px/1.5 "Instrument Sans", system-ui, sans-serif;
+    font-variant-numeric: tabular-nums;
+  }
+  header { max-width: 1120px; margin: 0 auto; padding: 32px 16px 20px; }
+  h1 { font-size: 28px; line-height: 1.2; margin: 0 0 8px; font-weight: 700; letter-spacing: -0.01em; }
+  header p { margin: 0; max-width: 68ch; color: var(--muted); }
+  header a { color: var(--action); }
+  main {
+    max-width: 1120px; margin: 0 auto; padding: 0 16px 48px;
+    display: grid; grid-template-columns: minmax(300px, 400px) 1fr; gap: 20px; align-items: start;
+  }
+  .list { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .list-head { padding: 12px 14px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+  .row {
+    display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; width: 100%;
+    padding: 10px 14px; border: 0; border-bottom: 1px solid var(--line); background: none;
+    text-align: left; font: inherit; color: inherit; cursor: pointer;
+  }
+  .row:last-child { border-bottom: 0; }
+  .row:hover { background: #f6f8fa; }
+  .row[aria-current="true"] { background: #e4eaf2; box-shadow: inset 3px 0 0 var(--action); }
+  .row:focus-visible { outline: 2px solid var(--action); outline-offset: -2px; }
+  .row .id { font-weight: 600; }
+  .row .when { font-size: 13px; color: var(--muted); text-align: right; }
+  .row .scn { grid-column: 1 / -1; font-size: 13px; color: var(--muted); }
+  .when.soon { color: var(--risk); font-weight: 600; }
+
+  .detail { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 20px; position: sticky; top: 16px; }
+  .detail h2 { font-size: 22px; margin: 0 0 4px; }
+  .detail .scn { color: var(--muted); margin: 0 0 20px; }
+  .signals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+  .sig h3 { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 6px; }
+  .sig .big { font-size: 20px; font-weight: 600; line-height: 1.2; }
+  .sig .small { font-size: 13px; color: var(--muted); }
+  .bars { margin-top: 8px; display: grid; gap: 4px; }
+  .bar { height: 6px; border-radius: 3px; background: var(--line); }
+  .bar.now { background: var(--action); }
+  .tickets { list-style: none; padding: 0; margin: 6px 0 0; font-size: 13px; }
+  .tickets li { padding: 2px 0; }
+  .tickets .neg { color: var(--risk); }
+
+  .run { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding-top: 16px; border-top: 1px solid var(--line); }
+  button.go {
+    background: var(--action); color: #fff; border: 0; border-radius: 6px; padding: 10px 16px;
+    font: 600 15px "Instrument Sans", system-ui, sans-serif; cursor: pointer;
+  }
+  button.go:disabled { opacity: 0.6; cursor: progress; }
+  button.go:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .note { font-size: 13px; color: var(--muted); }
+
+  .result { margin-top: 18px; }
+  .verdicts { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 12px; }
+  .v h3 { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 4px; }
+  .tag { display: inline-block; padding: 3px 10px; border-radius: 999px; font-weight: 600; font-size: 14px; color: #fff; }
+  .tag.AT_RISK { background: var(--risk); }
+  .tag.NOT_AT_RISK { background: var(--safe); }
+  .tag.AMBIGUOUS { background: var(--unsure); }
+  .tag.NONE { background: var(--none); }
+  .match { font-size: 14px; font-weight: 600; align-self: end; padding-bottom: 3px; }
+  .match.yes { color: var(--safe); }
+  .match.no { color: var(--risk); }
+  .reasoning { white-space: pre-wrap; background: var(--paper); border-radius: 6px; padding: 14px; font-size: 14px; max-height: 420px; overflow: auto; }
+  .error { color: var(--risk); }
+
+  @media (max-width: 820px) {
+    main { grid-template-columns: 1fr; }
+    .detail { position: static; }
+    .list { max-height: 50vh; overflow: auto; }
+  }
+  @media (max-width: 520px) {
+    .signals { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Renewal Risk Agent</h1>
+  <p>Pick a customer account. The agent pulls its product usage, support tickets and contract terms,
+    then decides whether the account is at risk of churning before renewal. Its verdict is shown next
+    to the label from the hand-built evaluation set, so you can see where it agrees and where it doesn't.
+    Data is synthetic. <a href="/docs">API docs</a> · <a href="https://github.com/Nidhi313/renewal-risk-agent">Source</a></p>
+</header>
+<main>
+  <section class="list" aria-label="Customer accounts">
+    <div class="list-head">20 accounts, soonest renewal first</div>
+    <div id="rows"><p class="list-head">Loading accounts…</p></div>
+  </section>
+  <section class="detail" id="detail" aria-live="polite">
+    <p class="note">Select an account to see its signals.</p>
+  </section>
+</main>
+<script>
+const LABEL = { AT_RISK: "At risk", NOT_AT_RISK: "Not at risk", AMBIGUOUS: "Ambiguous" };
+const NEG = new Set(["angry", "frustrated", "negative", "very_negative"]);
+let customers = [];
+let current = null;
+
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const money = n => "$" + Number(n).toLocaleString("en-US");
+const renewText = d => d === 0 ? "Renews today" : `Renews in ${d} day${d === 1 ? "" : "s"}`;
+const tag = v => `<span class="tag ${v || "NONE"}">${v ? LABEL[v] : "No verdict"}</span>`;
+
+async function load() {
+  const res = await fetch("/customers/");
+  customers = (await res.json()).sort((a, b) => a.contract.days_until_renewal - b.contract.days_until_renewal);
+  document.getElementById("rows").innerHTML = customers.map(c => {
+    const d = c.contract.days_until_renewal;
+    return `<button class="row" data-id="${c.customer_id}">
+      <span class="id">${c.customer_id}</span>
+      <span class="when ${d <= 14 ? "soon" : ""}">${renewText(d)}</span>
+      <span class="scn">${esc(c.scenario)}</span>
+    </button>`;
+  }).join("");
+  document.querySelectorAll(".row").forEach(b => b.addEventListener("click", () => select(b.dataset.id)));
+  const fromHash = location.hash.slice(1);
+  select(customers.some(c => c.customer_id === fromHash) ? fromHash : customers[0].customer_id);
+}
+
+function usageBlock(u) {
+  if (!u.data_available) {
+    return `<div class="big">No data</div><div class="small">Usage not synced. Treated as a data gap, not zero.</div>`;
+  }
+  const max = Math.max(u.usage_30d, u.usage_90d_avg);
+  const pct = Math.round((u.usage_30d / u.usage_90d_avg - 1) * 100);
+  return `<div class="big">${pct > 0 ? "+" : ""}${pct}%</div>
+    <div class="small">${u.usage_30d} last 30 days vs ${u.usage_90d_avg} 90-day average</div>
+    <div class="bars" aria-hidden="true">
+      <div class="bar now" style="width:${u.usage_30d / max * 100}%"></div>
+      <div class="bar" style="width:${u.usage_90d_avg / max * 100}%"></div>
+    </div>`;
+}
+
+function ticketsBlock(t) {
+  if (!t.ticket_count) return `<div class="big">None</div><div class="small">No tickets on record</div>`;
+  return `<div class="big">${t.ticket_count}</div><ul class="tickets">${t.tickets.map(x =>
+    `<li class="${NEG.has(x.sentiment) ? "neg" : ""}">${esc(x.topic)}, ${esc(x.sentiment.replace("_", " "))}${x.status ? ", " + esc(x.status) : ""}</li>`
+  ).join("")}</ul>`;
+}
+
+function select(id) {
+  current = id;
+  history.replaceState(null, "", "#" + id);
+  document.querySelectorAll(".row").forEach(b => b.setAttribute("aria-current", b.dataset.id === id));
+  const c = customers.find(x => x.customer_id === id);
+  document.getElementById("detail").innerHTML = `
+    <h2>${c.customer_id}</h2>
+    <p class="scn">${esc(c.scenario)}</p>
+    <div class="signals">
+      <div class="sig"><h3>Usage</h3>${usageBlock(c.usage)}</div>
+      <div class="sig"><h3>Support tickets</h3>${ticketsBlock(c.tickets)}</div>
+      <div class="sig"><h3>Contract</h3>
+        <div class="big">${money(c.contract.annual_value)}</div>
+        <div class="small">${c.contract.tier} tier, ${renewText(c.contract.days_until_renewal).toLowerCase()}</div>
+      </div>
+    </div>
+    <div class="run">
+      <button class="go" id="go">Run the agent</button>
+      <span class="note" id="status">Makes live LLM calls. Results are cached for the day.</span>
+    </div>
+    <div class="result" id="result"></div>`;
+  document.getElementById("go").addEventListener("click", () => run(c));
+}
+
+async function run(c) {
+  const btn = document.getElementById("go"), status = document.getElementById("status"), out = document.getElementById("result");
+  btn.disabled = true; btn.textContent = "Running…";
+  status.textContent = "The agent is calling its three tools. This usually takes 5 to 20 seconds.";
+  out.innerHTML = "";
+  try {
+    const res = await fetch(`/predict/renewal-risk/?customer_id=${encodeURIComponent(c.customer_id)}`);
+    const body = await res.json();
+    if (current !== c.customer_id) return;
+    if (!res.ok) throw new Error(body.detail || res.statusText);
+    const agree = body.verdict && body.verdict === c.expected_verdict;
+    out.innerHTML = `
+      <div class="verdicts">
+        <div class="v"><h3>Agent verdict</h3>${tag(body.verdict)}</div>
+        <div class="v"><h3>Evaluation label</h3>${tag(c.expected_verdict)}</div>
+        <span class="match ${agree ? "yes" : "no"}">${agree ? "Matches the label" : "Disagrees with the label"}</span>
+      </div>
+      <div class="reasoning">${esc(body.assessment)}</div>`;
+    status.textContent = `${body.model} via ${body.provider}${body.cached ? ", cached result" : ""}`;
+  } catch (e) {
+    if (current !== c.customer_id) return;
+    out.innerHTML = `<p class="error">The agent could not finish: ${esc(e.message)}</p>`;
+    status.textContent = "Try again in a minute. Free-tier model quotas reset quickly.";
+  } finally {
+    if (current === c.customer_id) { btn.disabled = false; btn.textContent = "Run again"; }
+  }
+}
+
+load().catch(() => {
+  document.getElementById("rows").innerHTML = `<p class="list-head error">Accounts failed to load. The server may be waking up; refresh in 30 seconds.</p>`;
+});
+</script>
+</body>
+</html>

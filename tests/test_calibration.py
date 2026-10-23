@@ -24,7 +24,7 @@ def test_partial_agreement_flags_disagreements():
 def test_mismatched_lengths_raise():
     try:
         compute_calibration_report(["c1", "c2"], ["PASS"], ["PASS", "FAIL"])
-        assert False, "should have raised"
+        raise AssertionError("should have raised")
     except ValueError:
         pass
 

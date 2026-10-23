@@ -10,8 +10,8 @@ from pathlib import Path
 from deepeval.metrics import GEval
 from deepeval.models import GeminiModel, OllamaModel
 from deepeval.models.base_model import DeepEvalBaseLLM
-from langchain_groq import ChatGroq
 from deepeval.test_case import LLMTestCase, SingleTurnParams
+from langchain_groq import ChatGroq
 
 from src.agent import assess_customer
 from src.config import settings
@@ -24,9 +24,9 @@ warnings.filterwarnings("ignore", message=".*fixed sampling defaults.*")
 GOLDEN_SET_PATH = Path(__file__).parent.parent.parent / "data" / "golden_set" / "cases.jsonl"
 
 class GroqJudge(DeepEvalBaseLLM):
-    def __init__(self, model_name="llama-3.3-70b-versatile"):
-        self.model_name = model_name
-        self.model = ChatGroq(model=model_name, temperature=0, api_key=settings.groq_api_key)
+    def __init__(self, model_name: str | None = None):
+        self.model_name = model_name or settings.groq_model
+        self.model = ChatGroq(model=self.model_name, temperature=0, api_key=settings.groq_api_key)
 
     def load_model(self):
         return self.model
@@ -42,11 +42,11 @@ class GroqJudge(DeepEvalBaseLLM):
         return self.model_name
 
 if settings.model_provider == "ollama":
-    judge_model = OllamaModel(model="llama3.2", base_url="http://localhost:11434", temperature=0)
+    judge_model = OllamaModel(model=settings.ollama_model, base_url="http://localhost:11434", temperature=0)
 elif settings.model_provider == "groq":
     judge_model = GroqJudge()
 else:
-    judge_model = GeminiModel(model="gemini-3.6-flash", api_key=settings.google_api_key, temperature=0)
+    judge_model = GeminiModel(model=settings.gemini_model, api_key=settings.google_api_key, temperature=0)
 
 verdict_correctness = GEval(
     name="Verdict Correctness",

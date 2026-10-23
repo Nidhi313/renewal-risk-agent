@@ -17,8 +17,8 @@ def init_tracing():
 
     try:
         import phoenix as px
-        from phoenix.otel import register
         from openinference.instrumentation.langchain import LangChainInstrumentor
+        from phoenix.otel import register
     except Exception as e:
         print(f"Phoenix could not be imported, tracing disabled: {e}")
         return None

@@ -1,5 +1,6 @@
 """Tests for the position-swap bias checker. No API calls."""
 import pytest
+
 from src.judge_validator.position_bias import check_position_bias, check_position_bias_batch
 
 

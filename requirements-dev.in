@@ -1,0 +1,9 @@
+# Dev / eval dependencies. Lock with:
+#   uv pip compile -p 3.11 requirements-dev.in -o requirements-dev.txt
+-r requirements.in
+pytest
+httpx
+ruff
+deepeval
+scikit-learn
+langchain-ollama

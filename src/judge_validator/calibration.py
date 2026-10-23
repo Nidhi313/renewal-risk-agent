@@ -41,14 +41,14 @@ def compute_calibration_report(
         raise ValueError("case_ids, human_labels, and judge_labels must be the same length")
 
     n = len(case_ids)
-    agreements = sum(1 for h, j in zip(human_labels, judge_labels) if h == j)
+    agreements = sum(1 for h, j in zip(human_labels, judge_labels, strict=False) if h == j)
     raw_agreement = agreements / n if n else 0.0
 
     kappa = cohen_kappa_score(human_labels, judge_labels) if n > 1 else 0.0
 
     disagreements = [
         (cid, h, j)
-        for cid, h, j in zip(case_ids, human_labels, judge_labels)
+        for cid, h, j in zip(case_ids, human_labels, judge_labels, strict=False)
         if h != j
     ]
 

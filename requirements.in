@@ -1,0 +1,10 @@
+# Serving dependencies only (what the API container needs). Lock with:
+#   uv pip compile -p 3.11 requirements.in -c requirements-dev.txt -o requirements.txt
+fastapi
+uvicorn[standard]
+pydantic-settings
+python-dotenv
+langgraph
+langchain-core
+langchain-groq
+langchain-google-genai

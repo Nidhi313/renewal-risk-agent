@@ -10,16 +10,20 @@ for position bias, run-to-run consistency, and calibration against
 human-labeled cases — rather than assuming the judge's verdicts can be
 trusted by default.
 
-Deployed version: [https://renewal-risk-agent.onrender.com](https://renewal-risk-agent.onrender.com)
+Live demo: [renewal-risk-agent.onrender.com](https://renewal-risk-agent.onrender.com). Pick an
+account, run the agent, and compare its verdict with the golden-set label. The free instance
+sleeps when idle, so the first load can take about a minute.
 
-Example: `GET /predict/renewal-risk/?customer_id=cust_001` (also try cust_002 through cust_020 — see `data/golden_set/cases.jsonl` for the full scenario list)
+API: `GET /predict/renewal-risk/?customer_id=cust_001` (cust_001 to cust_020), `GET /customers/`
+for the raw signals and labels, and interactive docs at `/docs`.
 
 ## Repository Structure
 
 ```
 renewal-risk-agent/
 ├── src/
-│   ├── main.py              <- FastAPI entrypoint
+│   ├── main.py              <- FastAPI entrypoint (API + demo page)
+│   ├── static/index.html     <- Demo UI, served at /
 │   ├── config.py             <- Settings, loaded from environment
 │   ├── agent.py              <- LangGraph ReAct agent
 │   ├── tools.py               <- Tools available to the agent
@@ -28,10 +32,11 @@ renewal-risk-agent/
 │   └── judge_validator/       <- Judge reliability checks
 ├── data/golden_set/          <- Curated evaluation cases
 ├── tests/                     <- pytest suite
-├── .github/workflows/         <- CI: runs tests + eval suite on push
-├── Dockerfile
-├── Makefile                   <- install / test / lint / run shortcuts
-├── requirements.txt
+├── .github/workflows/         <- CI: lint, tests, Docker smoke test; evals on demand
+├── Dockerfile                 <- slim serving image (no eval tooling)
+├── Makefile                   <- install / test / lint / run / evals / lock
+├── requirements.in / .txt     <- serving deps (source / pinned lock)
+├── requirements-dev.in / .txt <- adds pytest, ruff, DeepEval, scikit-learn
 ├── pyproject.toml
 └── .pre-commit-config.yaml   <- ruff, runs before each commit
 ```
@@ -99,31 +104,44 @@ multi-product usage patterns, billing/payment history, and
 customer-specific history (has this account dipped and recovered
 before).
 
+**Model note:** the findings above were measured with Groq `llama-3.3-70b-versatile`, which
+Groq retired in August 2026. The agent now defaults to `openai/gpt-oss-120b` on Groq with Gemini
+as an automatic fallback. Re-running the golden set and the flip-rate check on the new model is
+the next experiment, and a useful one: it tests whether the judge findings hold across models.
+
 **Open hypothesis, weaker evidence:** cases where the renewal date falls
 exactly on the current day failed in both instances tested (n=2) —
 possibly a distinct weakness in date-boundary reasoning, not yet
 confirmed with enough data to state confidently.
 
-## Installation
-
-Clone the repository:
+## Running it
 
 ```
 git clone https://github.com/Nidhi313/renewal-risk-agent.git
 cd renewal-risk-agent
+pip install -r requirements-dev.txt
+cp .env.example .env        # add GROQ_API_KEY and/or GOOGLE_API_KEY
+make run                    # http://localhost:8080
+make test                   # no API keys or tokens needed
+make evals                  # golden set through the agent + DeepEval judge (real LLM calls)
 ```
 
-Install dependencies:
+Docker: `make docker`. The image only carries serving dependencies (about 120 MB of RAM at
+idle), so it fits Render's free 512 MB instance.
 
-```
-pip install -r requirements.txt
-```
+## Model providers and free-tier limits
 
-Add your API keys to `.env`, then run:
+Model IDs are environment variables (`GROQ_MODEL`, `GEMINI_MODEL`), so a provider retiring a
+model is a config change, not a code change. If the primary provider (`MODEL_PROVIDER`) errors
+on a rate limit, a retired model, or a missing key, the request is retried once on
+`FALLBACK_PROVIDER`. Assessments are cached per customer per day, because the synthetic data
+does not change and repeated demo clicks would otherwise burn quota.
 
-```
-uvicorn src.main:app --host 0.0.0.0 --port 8080
-```
+## Deploying to Render
+
+The live demo runs as a Docker web service on Render that redeploys on every push to `main`.
+In the service's Environment tab, set `GROQ_API_KEY` and `GOOGLE_API_KEY`; the other settings in
+`.env.example` have working defaults. Health check path: `/health/`.
 
 ## References
 

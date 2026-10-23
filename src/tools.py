@@ -1,8 +1,12 @@
-"""Tools available to the renewal-risk agent."""
-from langchain_core.tools import tool
+"""Tools available to the renewal-risk agent, backed by a synthetic dataset.
+
+Renewal dates are stored as offsets ("renewal_in_days") and turned into real
+dates at call time. Computing them once at import time meant a long-running
+server slowly drifted out of sync with the date the agent is told is "today".
+"""
 from datetime import date, timedelta
 
-_TODAY = date.today()
+from langchain_core.tools import tool
 
 _FAKE_USAGE = {
     "cust_001": {"customer_id": "cust_001", "usage_30d": 12, "usage_90d_avg": 180, "trend": "declining"},
@@ -40,17 +44,17 @@ _FAKE_TICKETS = {
     "cust_010": [],
 }
 
-_FAKE_CONTRACTS = {
-    "cust_001": {"tier": "growth", "renewal_date": (_TODAY + timedelta(days=41)).isoformat(), "annual_value": 24000},
-    "cust_002": {"tier": "enterprise", "renewal_date": (_TODAY + timedelta(days=57)).isoformat(), "annual_value": 96000},
-    "cust_003": {"tier": "growth", "renewal_date": (_TODAY + timedelta(days=15)).isoformat(), "annual_value": 30000},
-    "cust_004": {"tier": "growth", "renewal_date": (_TODAY + timedelta(days=199)).isoformat(), "annual_value": 28000},
-    "cust_005": {"tier": "enterprise", "renewal_date": (_TODAY + timedelta(days=10)).isoformat(), "annual_value": 120000},
-    "cust_006": {"tier": "growth", "renewal_date": (_TODAY + timedelta(days=30)).isoformat(), "annual_value": 32000},
-    "cust_007": {"tier": "growth", "renewal_date": _TODAY.isoformat(), "annual_value": 27000},
-    "cust_008": {"tier": "growth", "renewal_date": (_TODAY + timedelta(days=20)).isoformat(), "annual_value": 25000},
-    "cust_009": {"tier": "enterprise", "renewal_date": (_TODAY + timedelta(days=60)).isoformat(), "annual_value": 88000},
-    "cust_010": {"tier": "growth", "renewal_date": (_TODAY + timedelta(days=5)).isoformat(), "annual_value": 26000},
+_FAKE_CONTRACTS = {  # renewal is expressed as days from "today" so the scenarios never go stale
+    "cust_001": {"tier": "growth", "renewal_in_days": 41, "annual_value": 24000},
+    "cust_002": {"tier": "enterprise", "renewal_in_days": 57, "annual_value": 96000},
+    "cust_003": {"tier": "growth", "renewal_in_days": 15, "annual_value": 30000},
+    "cust_004": {"tier": "growth", "renewal_in_days": 199, "annual_value": 28000},
+    "cust_005": {"tier": "enterprise", "renewal_in_days": 10, "annual_value": 120000},
+    "cust_006": {"tier": "growth", "renewal_in_days": 30, "annual_value": 32000},
+    "cust_007": {"tier": "growth", "renewal_in_days": 0, "annual_value": 27000},
+    "cust_008": {"tier": "growth", "renewal_in_days": 20, "annual_value": 25000},
+    "cust_009": {"tier": "enterprise", "renewal_in_days": 60, "annual_value": 88000},
+    "cust_010": {"tier": "growth", "renewal_in_days": 5, "annual_value": 26000},
 }
 
 _FAKE_USAGE.update({
@@ -86,22 +90,31 @@ _FAKE_TICKETS.update({
 })
 
 _FAKE_CONTRACTS.update({
-    "cust_011": {"tier": "growth", "renewal_date": (_TODAY + timedelta(days=3)).isoformat(), "annual_value": 22000},
-    "cust_012": {"tier": "enterprise", "renewal_date": (_TODAY + timedelta(days=4)).isoformat(), "annual_value": 150000},
-    "cust_013": {"tier": "growth", "renewal_date": (_TODAY + timedelta(days=45)).isoformat(), "annual_value": 29000},
-    "cust_014": {"tier": "enterprise", "renewal_date": (_TODAY + timedelta(days=12)).isoformat(), "annual_value": 110000},
-    "cust_015": {"tier": "growth", "renewal_date": (_TODAY + timedelta(days=150)).isoformat(), "annual_value": 21000},
-    "cust_016": {"tier": "growth", "renewal_date": (_TODAY + timedelta(days=10)).isoformat(), "annual_value": 24000},
-    "cust_017": {"tier": "growth", "renewal_date": (_TODAY + timedelta(days=18)).isoformat(), "annual_value": 27000},
-    "cust_018": {"tier": "enterprise", "renewal_date": (_TODAY + timedelta(days=90)).isoformat(), "annual_value": 200000},
-    "cust_019": {"tier": "growth", "renewal_date": (_TODAY + timedelta(days=250)).isoformat(), "annual_value": 18000},
-    "cust_020": {"tier": "growth", "renewal_date": _TODAY.isoformat(), "annual_value": 24000},
+    "cust_011": {"tier": "growth", "renewal_in_days": 3, "annual_value": 22000},
+    "cust_012": {"tier": "enterprise", "renewal_in_days": 4, "annual_value": 150000},
+    "cust_013": {"tier": "growth", "renewal_in_days": 45, "annual_value": 29000},
+    "cust_014": {"tier": "enterprise", "renewal_in_days": 12, "annual_value": 110000},
+    "cust_015": {"tier": "growth", "renewal_in_days": 150, "annual_value": 21000},
+    "cust_016": {"tier": "growth", "renewal_in_days": 10, "annual_value": 24000},
+    "cust_017": {"tier": "growth", "renewal_in_days": 18, "annual_value": 27000},
+    "cust_018": {"tier": "enterprise", "renewal_in_days": 90, "annual_value": 200000},
+    "cust_019": {"tier": "growth", "renewal_in_days": 250, "annual_value": 18000},
+    "cust_020": {"tier": "growth", "renewal_in_days": 0, "annual_value": 24000},
 })
 
-@tool
-def get_usage_data(customer_id: str) -> dict:
-    """Return recent product usage metrics for a customer."""
-    data = _FAKE_USAGE.get(customer_id, {"customer_id": customer_id, "error": "not found"})
+
+def known_customer_ids() -> list[str]:
+    return sorted(_FAKE_CONTRACTS)
+
+
+def is_known_customer(customer_id: str) -> bool:
+    return customer_id in _FAKE_CONTRACTS
+
+
+def _usage(customer_id: str) -> dict:
+    data = _FAKE_USAGE.get(customer_id)
+    if data is None:
+        return {"customer_id": customer_id, "error": "not found"}
     if data.get("usage_30d") is None:
         return {
             "customer_id": customer_id,
@@ -111,14 +124,52 @@ def get_usage_data(customer_id: str) -> dict:
     return {**data, "data_available": True}
 
 
+def _tickets(customer_id: str) -> dict:
+    # Always a populated dict, never a bare empty list: Groq rejects empty-list tool results.
+    tickets = _FAKE_TICKETS.get(customer_id, [])
+    return {"customer_id": customer_id, "ticket_count": len(tickets), "tickets": tickets}
+
+
+def _contract(customer_id: str, today: date | None = None) -> dict:
+    # Same fields the agent always saw (tier, renewal_date, annual_value). Days-until-renewal
+    # is deliberately NOT given to the agent: working it out from the date is part of what
+    # the golden set tests, so adding it here would change the experiment.
+    terms = _FAKE_CONTRACTS.get(customer_id)
+    if terms is None:
+        return {"customer_id": customer_id, "error": "not found"}
+    today = today or date.today()
+    return {
+        "tier": terms["tier"],
+        "renewal_date": (today + timedelta(days=terms["renewal_in_days"])).isoformat(),
+        "annual_value": terms["annual_value"],
+    }
+
+
+def customer_snapshot(customer_id: str) -> dict:
+    """Raw signals for one customer, no LLM involved. Used by the UI."""
+    return {
+        "usage": _usage(customer_id),
+        "tickets": _tickets(customer_id),
+        "contract": {
+            **_contract(customer_id),
+            "days_until_renewal": _FAKE_CONTRACTS[customer_id]["renewal_in_days"],
+        },
+    }
+
+
+@tool
+def get_usage_data(customer_id: str) -> dict:
+    """Return recent product usage metrics for a customer."""
+    return _usage(customer_id)
+
+
 @tool
 def get_support_tickets(customer_id: str) -> dict:
     """Return recent support tickets for a customer."""
-    tickets = _FAKE_TICKETS.get(customer_id, [])
-    return {"customer_id": customer_id, "ticket_count": len(tickets), "tickets": tickets}
+    return _tickets(customer_id)
 
 
 @tool
 def get_contract_terms(customer_id: str) -> dict:
     """Return contract/renewal terms for a customer (renewal date, tier, value)."""
-    return _FAKE_CONTRACTS.get(customer_id, {"customer_id": customer_id, "error": "not found"})
+    return _contract(customer_id)
